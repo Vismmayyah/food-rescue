@@ -1,8 +1,158 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 
 function App() {
   const [page, setPage] = useState("home");
+const [donations, setDonations] = useState([]);
+const [editingFoodId, setEditingFoodId] = useState(null);
+
+useEffect(() => {
+  fetch("http://localhost:8080/api/donations")
+    .then((response) => response.json())
+    .then((data) => {
+      setDonations(data);
+    })
+    .catch((error) => {
+      console.error("Error fetching donations:", error);
+    });
+}, []);
+
+  const [foodName, setFoodName] = useState("");
+  const [foodType, setFoodType] = useState("");
+  const [quantity, setQuantity] = useState("");
+  const [location, setLocation] = useState("");
+  const [preparationDate, setPreparationDate] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
+
+const submitDonation = async () => {
+  try {
+    const formData = new URLSearchParams();
+
+    formData.append("foodName", foodName);
+    formData.append("foodType", foodType);
+    formData.append("quantity", quantity);
+    formData.append("location", location);
+    formData.append("preparationDate", preparationDate);
+    formData.append("expiryDate", expiryDate);
+
+    const response = await fetch(
+      "http://localhost:8080/api/donations",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData,
+      }
+    );
+
+    const result = await response.json();
+
+    if (response.ok) {
+      alert(result.message);
+
+      setFoodName("");
+      setFoodType("");
+      setQuantity("");
+      setLocation("");
+      setPreparationDate("");
+      setExpiryDate("");
+
+      // Refresh donation list
+      const updatedResponse = await fetch(
+        "http://localhost:8080/api/donations"
+      );
+      const updatedData = await updatedResponse.json();
+      setDonations(updatedData);
+
+    } else {
+      alert(result.message);
+    }
+
+  } catch (error) {
+    console.error(error);
+    alert("Could not connect to the Java server.");
+  }
+};
+
+const deleteDonation = async (foodId) => {
+  try {
+    const response = await fetch(
+      `http://localhost:8080/api/donations?id=${foodId}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    const result = await response.json();
+
+    if (response.ok) {
+      alert(result.message);
+
+      setDonations((prev) =>
+        prev.filter((food) => food.foodId !== foodId)
+      );
+    } else {
+      alert(result.message);
+    }
+
+  } catch (error) {
+    console.error(error);
+    alert("Could not connect to the Java server.");
+  }
+};
+const updateDonation = async () => {
+  try {
+    const formData = new URLSearchParams();
+
+    formData.append("foodName", foodName);
+    formData.append("foodType", foodType);
+    formData.append("quantity", quantity);
+    formData.append("location", location);
+    formData.append("preparationDate", preparationDate);
+    formData.append("expiryDate", expiryDate);
+
+    const response = await fetch(
+      `http://localhost:8080/api/donations?id=${editingFoodId}`,
+      {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: formData,
+      }
+    );
+
+    const result = await response.json();
+
+    if (response.ok) {
+      alert(result.message);
+
+      const updatedResponse = await fetch(
+        "http://localhost:8080/api/donations"
+      );
+
+      const updatedData = await updatedResponse.json();
+      setDonations(updatedData);
+
+      setEditingFoodId(null);
+      setFoodName("");
+      setFoodType("");
+      setQuantity("");
+      setLocation("");
+      setPreparationDate("");
+      setExpiryDate("");
+
+      setPage("find");
+    } else {
+      alert(result.message);
+    }
+
+  } catch (error) {
+    console.error(error);
+    alert("Could not connect to the Java server.");
+  }
+};
 
   const foodItems = [
     {
@@ -101,12 +251,55 @@ function App() {
 
             <p>Fill in the details of your food donation.</p>
 
-            <input type="text" placeholder="Food name" />
-            <input type="number" placeholder="Quantity" />
-            <input type="text" placeholder="Location" />
-            <input type="date" />
+            <input
+  type="text"
+  placeholder="Food name"
+  value={foodName}
+  onChange={(e) => setFoodName(e.target.value)}
+/>
 
-            <button>Submit Donation</button>
+<select
+  value={foodType}
+  onChange={(e) => setFoodType(e.target.value)}
+>
+  <option value="">Select Food Type</option>
+  <option value="Vegetarian">Vegetarian</option>
+  <option value="Non-Vegetarian">Non-Vegetarian</option>
+</select>
+
+<input
+  type="number"
+  placeholder="Quantity"
+  value={quantity}
+  onChange={(e) => setQuantity(e.target.value)}
+/>
+
+<input
+  type="text"
+  placeholder="Location"
+  value={location}
+  onChange={(e) => setLocation(e.target.value)}
+/>
+
+<label>Preparation Date</label>
+<input
+  type="date"
+  value={preparationDate}
+  onChange={(e) => setPreparationDate(e.target.value)}
+/>
+
+<label>Expiry Date & Time</label>
+<input
+  type="datetime-local"
+  value={expiryDate}
+  onChange={(e) => setExpiryDate(e.target.value)}
+/>
+
+            <button
+  onClick={editingFoodId ? updateDonation : submitDonation}
+>
+  {editingFoodId ? "Update Donation" : "Submit Donation"}
+</button>
 
             <button onClick={() => setPage("home")}>
               Back to Home
@@ -124,17 +317,34 @@ function App() {
             <p>Find food donations available near you.</p>
 
             <div className="food-list">
-              {foodItems.map((food, index) => (
+              {donations.map((food, index) => (
                 <div className="food-card" key={index}>
-                  <h2>{food.name}</h2>
+                  <h2>{food.foodName}</h2>
 
                   <p>📦 Quantity: {food.quantity}</p>
 
                   <p>📍 Location: {food.location}</p>
 
-                  <p>📅 Available: {food.date}</p>
+                  <p>📅 Available: {food.preparationDate}</p>
 
                   <button>Request Food</button>
+<button
+  onClick={() => {
+    setEditingFoodId(food.foodId);
+    setFoodName(food.foodName);
+    setFoodType(food.foodType);
+    setQuantity(food.quantity);
+    setLocation(food.location);
+    setPreparationDate(food.preparationDate || "");
+    setExpiryDate(food.expiryDate || "");
+    setPage("donate");
+  }}
+>
+  Edit Donation
+</button>
+<button onClick={() => deleteDonation(food.foodId)}>
+  Delete Donation
+</button>
                 </div>
               ))}
             </div>
