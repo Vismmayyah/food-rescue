@@ -967,6 +967,7 @@ const requestsPage = (
                          );
 
                       await loadRequests();
+                      await loadDonations();
 
                     } catch (error) {
 
