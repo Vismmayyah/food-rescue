@@ -1,0 +1,17 @@
+# Java compiled files
+*.class
+
+# MySQL connector
+*.jar
+
+# Java test files
+backend/Test*.java
+
+# Local database credentials
+backend/DBConnection.java
+
+# Old duplicate donation files
+backend/donations/
+
+# Node dependencies
+node_modules/
